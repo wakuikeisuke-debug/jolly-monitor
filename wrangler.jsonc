@@ -1,14 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jolly-monitor",
-  "main": "src/index.js",
+  "main": "index.js",
   "compatibility_date": "2026-08-30",
   "workers_dev": true,
-
   "triggers": {
     "crons": ["* * * * *"]
   },
-
   "durable_objects": {
     "bindings": [
       {
@@ -17,7 +15,6 @@
       }
     ]
   },
-
   "migrations": [
     {
       "tag": "v1",

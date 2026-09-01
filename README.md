@@ -18,3 +18,9 @@ CloudflareのSecretに `NTFY_TOPIC` を追加してください。
 値は第三者に推測されにくい英数字・`_`・`-` の8〜128文字。
 
 iPhoneのntfyアプリで同じtopicを購読します。
+
+テスト:
+`/test-notification`
+
+
+Debug endpoint `/debug-env` lists binding names only; it never returns secret values.

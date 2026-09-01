@@ -40,6 +40,20 @@ export default {
         return json({ ok: true, notification });
       }
 
+      if (url.pathname === "/debug-env") {
+        const keys = Object.keys(env || {}).sort();
+        return json({
+          ok: true,
+          envKeys: keys,
+          hasNTFY_TOPIC: Object.prototype.hasOwnProperty.call(env || {}, "NTFY_TOPIC"),
+          ntfyType: typeof (env && env.NTFY_TOPIC),
+          ntfyLength:
+            typeof (env && env.NTFY_TOPIC) === "string"
+              ? env.NTFY_TOPIC.length
+              : null
+        });
+      }
+
       const result = await runMonitor(env, true);
       return json(result);
     } catch (e) {

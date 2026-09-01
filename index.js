@@ -32,38 +32,6 @@ export default {
         return json({ ok: true, service: "jolly-monitor" });
       }
 
-      if (url.pathname === "/test-notification") {
-        const notification = await sendNotification(
-          env,
-          "Cloudflare Workerからの通知テストです。"
-        );
-        return json({ ok: true, notification });
-      }
-
-      if (url.pathname === "/debug-env") {
-        const keys = Object.keys(env || {}).sort();
-        return json({
-          ok: true,
-          envKeys: keys,
-          hasPUSHOVER_APP_TOKEN: Object.prototype.hasOwnProperty.call(
-            env || {},
-            "PUSHOVER_APP_TOKEN"
-          ),
-          hasPUSHOVER_USER_KEY: Object.prototype.hasOwnProperty.call(
-            env || {},
-            "PUSHOVER_USER_KEY"
-          ),
-          appTokenLength:
-            typeof (env && env.PUSHOVER_APP_TOKEN) === "string"
-              ? env.PUSHOVER_APP_TOKEN.length
-              : null,
-          userKeyLength:
-            typeof (env && env.PUSHOVER_USER_KEY) === "string"
-              ? env.PUSHOVER_USER_KEY.length
-              : null
-        });
-      }
-
       const result = await runMonitor(env, true);
       return json(result);
     } catch (e) {
@@ -118,9 +86,7 @@ async function runMonitor(env, manual) {
   }
 
   const data = ajax.data;
-  const ruby = await fetchRubyState(jar);
-
-  const activeBuildIds = getActiveBuildIds(data.build_data);
+const activeBuildIds = getActiveBuildIds(data.build_data);
 
   const current = {
     rubyFull: String(data.full_recovery_date || "").trim() === "",
@@ -181,7 +147,6 @@ async function runMonitor(env, manual) {
       active_build_count: activeBuildIds.length,
       active_build_ids: activeBuildIds
     },
-    rubySummary: ruby.summary
   };
 }
 
@@ -210,30 +175,6 @@ async function fetchAjax(jar) {
   }
 }
 
-async function fetchRubyState(jar) {
-  const res = await requestWithJar(GAME_MAIN, { method: "GET" }, jar, 12);
-  const html = await res.text();
-
-  const container = extractTagById(html, "page_main_default_nostamina");
-  const recovery = extractTagById(html, "page_main_default_full_recovery_date");
-
-  const style = container ? getAttr(container.openTag, "style") : "";
-  const recoveryText = recovery ? stripTags(recovery.innerHTML).trim() : "";
-
-  const hidden = /display\s*:\s*none/i.test(style || "");
-
-  // コンテナが存在し、hidden または回復時刻が空なら満タン。
-  const full = !!container && (hidden || recoveryText === "");
-
-  return {
-    full,
-    summary: {
-      containerFound: !!container,
-      containerHidden: hidden,
-      recoveryTime: recoveryText
-    }
-  };
-}
 
 async function login(env, jar) {
   const loginPage = await requestWithJar(

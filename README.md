@@ -1,43 +1,40 @@
 # JOLLY ROGER Monitor
 
-すべてのファイルをGitHubリポジトリ直下に置きます。
+Cloudflare Worker + Durable Object + Cron + Pushover.
 
+## Runtime Secrets
 
-RPC fix: JollyState extends DurableObject.
+Configure these as Cloudflare **Runtime variables and secrets** (Secret):
 
-
-Ruby fix: uses Ajax `full_recovery_date`; empty means full.
-
-
-Build fix: tracks active build IDs (`last_time > 0`) and notifies when a previously active ID disappears.
-
-
-## iPhone通知（ntfy）
-
-CloudflareのSecretに `NTFY_TOPIC` を追加してください。
-値は第三者に推測されにくい英数字・`_`・`-` の8〜128文字。
-
-iPhoneのntfyアプリで同じtopicを購読します。
-
-テスト:
-`/test-notification`
-
-
-Debug endpoint `/debug-env` lists binding names only; it never returns secret values.
-
-
-## iPhone通知（Pushover）
-
-Cloudflare Runtime Secrets:
+- `JOLLY_ID`
+- `JOLLY_PASSWORD`
 - `PUSHOVER_APP_TOKEN`
 - `PUSHOVER_USER_KEY`
 
-PushoverでApplication/API Tokenを作成し、
-自分のUser Keyとともに上記2つへ登録します。
+Do not place secret values in this repository.
 
-テスト:
-`/test-notification`
+## Monitoring
 
-診断:
-`/debug-env`
-値そのものは返しません。
+Cron runs every minute and checks the authenticated JOLLY ROGER Ajax response.
+
+Notifications currently enabled:
+
+- Ruby becomes full (`full_recovery_date` becomes empty)
+- Collection becomes available (`gold_collect >= 1`)
+- A previously active construction disappears from the active build IDs
+
+Raid state (`raid_monster_flg`) is retained for later live-event verification; automatic raid notification should remain disabled until validated during an active raid event.
+
+## Public endpoint
+
+- `/health` only
+
+Test/debug notification endpoints have been removed for production use.
+
+## Deployment
+
+Production branch: `main`
+
+Cloudflare build/deploy command:
+
+`npx wrangler deploy`

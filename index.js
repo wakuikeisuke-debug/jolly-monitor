@@ -32,6 +32,14 @@ export default {
         return json({ ok: true, service: "jolly-monitor" });
       }
 
+      if (url.pathname === "/test-notification") {
+        const notification = await sendNotification(
+          env,
+          "Cloudflare Workerからの通知テストです。"
+        );
+        return json({ ok: true, notification });
+      }
+
       const result = await runMonitor(env, true);
       return json(result);
     } catch (e) {
@@ -433,6 +441,37 @@ function stripTags(value) {
 }
 
 async function sendNotification(env, message) {
-  // 次段階でiPhone Push通知を接続する。
-  console.log("NOTIFY:", message);
+  const topic = String(env.NTFY_TOPIC || "").trim();
+
+  if (!topic) {
+    console.log("NOTIFY SKIPPED: NTFY_TOPIC is not configured");
+    return { sent: false, reason: "NTFY_TOPIC_NOT_CONFIGURED" };
+  }
+
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(topic)) {
+    return { sent: false, reason: "INVALID_NTFY_TOPIC" };
+  }
+
+  const res = await fetch(
+    "https://ntfy.sh/" + encodeURIComponent(topic),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Title": "JOLLY ROGER",
+        "Priority": "high",
+        "Tags": "pirate_flag"
+      },
+      body: message
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      "ntfy送信失敗 HTTP " + res.status + " " + text.slice(0, 160)
+    );
+  }
+
+  return { sent: true, status: res.status };
 }

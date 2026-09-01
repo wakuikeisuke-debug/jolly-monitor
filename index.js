@@ -88,10 +88,13 @@ async function runMonitor(env, manual) {
   const data = ajax.data;
   const ruby = await fetchRubyState(jar);
 
+  const activeBuildIds = getActiveBuildIds(data.build_data);
+
   const current = {
     rubyFull: String(data.full_recovery_date || "").trim() === "",
     collectable: Number(data.gold_collect || 0) >= 1,
-    constructionComplete: detectConstructionComplete(data.build_data),
+    activeBuildIds,
+    constructionComplete: false,
     raid: Number(data.raid_monster_flg || 0) === 1,
     checkedAt: new Date().toISOString()
   };
@@ -106,11 +109,16 @@ async function runMonitor(env, manual) {
     if (previous.collectable === false && current.collectable === true) {
       notifications.push("💰 集金可能な建物があります");
     }
-    if (
-      previous.constructionComplete === false &&
-      current.constructionComplete === true
-    ) {
-      notifications.push("🏗️ 建築が完了しました");
+    if (Array.isArray(previous.activeBuildIds)) {
+      const finishedBuildIds = previous.activeBuildIds.filter(
+        (id) => !current.activeBuildIds.includes(id)
+      );
+
+      if (finishedBuildIds.length > 0) {
+        notifications.push(
+          "🏗️ 建築が完了しました（" + finishedBuildIds.length + "件）"
+        );
+      }
     }
 
     // レイド通知は後で有効化
@@ -137,18 +145,21 @@ async function runMonitor(env, manual) {
       gold_collect: data.gold_collect,
       next_collect_time: data.next_collect_time,
       raid_monster_flg: data.raid_monster_flg,
-      build_count: Array.isArray(data.build_data) ? data.build_data.length : null
+      build_count: Array.isArray(data.build_data) ? data.build_data.length : null,
+      active_build_count: activeBuildIds.length,
+      active_build_ids: activeBuildIds
     },
     rubySummary: ruby.summary
   };
 }
 
-function detectConstructionComplete(buildData) {
-  if (!Array.isArray(buildData)) return false;
+function getActiveBuildIds(buildData) {
+  if (!Array.isArray(buildData)) return [];
 
-  // 現在の実測では完成済み建物で last_time が負値。
-  // 建築中サンプル取得後に必要なら微調整する。
-  return buildData.some((b) => Number(b && b.last_time) <= 0);
+  return buildData
+    .filter((b) => Number(b && b.last_time) > 0)
+    .map((b) => String(b && b.id ? b.id : ""))
+    .filter((id) => id !== "");
 }
 
 async function fetchAjax(jar) {

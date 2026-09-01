@@ -7,3 +7,6 @@ RPC fix: JollyState extends DurableObject.
 
 
 Ruby fix: uses Ajax `full_recovery_date`; empty means full.
+
+
+Build fix: tracks active build IDs (`last_time > 0`) and notifies when a previously active ID disappears.

@@ -47,3 +47,4 @@ https://<worker>.workers.dev/health
 - 建築完了（last_time判定は建築中実測後に必要なら微調整）
 - レイド状態は取得のみ。通知は未有効化。
 - Push通知サービスは次段階で接続。
+- cloudflare deployment test

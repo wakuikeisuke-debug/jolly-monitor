@@ -45,11 +45,21 @@ export default {
         return json({
           ok: true,
           envKeys: keys,
-          hasNTFY_TOPIC: Object.prototype.hasOwnProperty.call(env || {}, "NTFY_TOPIC"),
-          ntfyType: typeof (env && env.NTFY_TOPIC),
-          ntfyLength:
-            typeof (env && env.NTFY_TOPIC) === "string"
-              ? env.NTFY_TOPIC.length
+          hasPUSHOVER_APP_TOKEN: Object.prototype.hasOwnProperty.call(
+            env || {},
+            "PUSHOVER_APP_TOKEN"
+          ),
+          hasPUSHOVER_USER_KEY: Object.prototype.hasOwnProperty.call(
+            env || {},
+            "PUSHOVER_USER_KEY"
+          ),
+          appTokenLength:
+            typeof (env && env.PUSHOVER_APP_TOKEN) === "string"
+              ? env.PUSHOVER_APP_TOKEN.length
+              : null,
+          userKeyLength:
+            typeof (env && env.PUSHOVER_USER_KEY) === "string"
+              ? env.PUSHOVER_USER_KEY.length
               : null
         });
       }
@@ -455,37 +465,63 @@ function stripTags(value) {
 }
 
 async function sendNotification(env, message) {
-  const topic = String(env.NTFY_TOPIC || "").trim();
+  const token = String(env.PUSHOVER_APP_TOKEN || "").trim();
+  const user = String(env.PUSHOVER_USER_KEY || "").trim();
 
-  if (!topic) {
-    console.log("NOTIFY SKIPPED: NTFY_TOPIC is not configured");
-    return { sent: false, reason: "NTFY_TOPIC_NOT_CONFIGURED" };
+  if (!token || !user) {
+    console.log("NOTIFY SKIPPED: Pushover secrets are not configured");
+    return {
+      sent: false,
+      reason: "PUSHOVER_NOT_CONFIGURED",
+      hasToken: !!token,
+      hasUser: !!user
+    };
   }
 
-  if (!/^[A-Za-z0-9_-]{8,128}$/.test(topic)) {
-    return { sent: false, reason: "INVALID_NTFY_TOPIC" };
-  }
+  const body = new URLSearchParams({
+    token: token,
+    user: user,
+    title: "JOLLY ROGER",
+    message: message,
+    priority: "0"
+  });
 
-  const res = await fetch(
-    "https://ntfy.sh/" + encodeURIComponent(topic),
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Title": "JOLLY ROGER",
-        "Priority": "high",
-        "Tags": "pirate_flag"
-      },
-      body: message
-    }
-  );
+  const res = await fetch("https://api.pushover.net/1/messages.json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
+  });
+
+  const text = await res.text();
 
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(
-      "ntfy送信失敗 HTTP " + res.status + " " + text.slice(0, 160)
+      "Pushover送信失敗 HTTP " +
+      res.status +
+      " " +
+      text.slice(0, 200)
     );
   }
 
-  return { sent: true, status: res.status };
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch (_) {}
+
+  if (parsed && parsed.status !== 1) {
+    throw new Error(
+      "Pushover送信失敗 " + text.slice(0, 200)
+    );
+  }
+
+  return {
+    sent: true,
+    status: res.status,
+    request:
+      parsed && parsed.request
+        ? parsed.request
+        : null
+  };
 }

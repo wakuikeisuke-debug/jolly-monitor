@@ -24,3 +24,20 @@ iPhoneのntfyアプリで同じtopicを購読します。
 
 
 Debug endpoint `/debug-env` lists binding names only; it never returns secret values.
+
+
+## iPhone通知（Pushover）
+
+Cloudflare Runtime Secrets:
+- `PUSHOVER_APP_TOKEN`
+- `PUSHOVER_USER_KEY`
+
+PushoverでApplication/API Tokenを作成し、
+自分のUser Keyとともに上記2つへ登録します。
+
+テスト:
+`/test-notification`
+
+診断:
+`/debug-env`
+値そのものは返しません。

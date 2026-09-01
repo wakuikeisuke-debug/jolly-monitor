@@ -89,7 +89,7 @@ async function runMonitor(env, manual) {
   const ruby = await fetchRubyState(jar);
 
   const current = {
-    rubyFull: ruby.full,
+    rubyFull: String(data.full_recovery_date || "").trim() === "",
     collectable: Number(data.gold_collect || 0) >= 1,
     constructionComplete: detectConstructionComplete(data.build_data),
     raid: Number(data.raid_monster_flg || 0) === 1,
@@ -133,6 +133,7 @@ async function runMonitor(env, manual) {
     previous,
     notifications,
     ajaxSummary: {
+      full_recovery_date: data.full_recovery_date,
       gold_collect: data.gold_collect,
       next_collect_time: data.next_collect_time,
       raid_monster_flg: data.raid_monster_flg,

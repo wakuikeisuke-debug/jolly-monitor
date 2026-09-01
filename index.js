@@ -1,8 +1,11 @@
+import { DurableObject } from "cloudflare:workers";
+
 const GAME_AJAX = "https://yamada.kaizoku-jolly.com/ajax.php?M=main&A=default";
 const GAME_MAIN = "https://yamada.kaizoku-jolly.com/?M=Main";
 
-export class JollyState {
+export class JollyState extends DurableObject {
   constructor(ctx, env) {
+    super(ctx, env);
     this.ctx = ctx;
     this.env = env;
   }

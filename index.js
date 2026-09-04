@@ -32,8 +32,7 @@ export default {
         return json({ ok: true, service: "jolly-monitor" });
       }
 
-      const result = await runMonitor(env, true);
-      return json(result);
+      return json({ ok: false, error: "Not Found" }, 404);
     } catch (e) {
       return json({
         ok: false,
@@ -86,14 +85,16 @@ async function runMonitor(env, manual) {
   }
 
   const data = ajax.data;
-const activeBuildIds = getActiveBuildIds(data.build_data);
+  const activeBuildIds = getActiveBuildIds(data.build_data);
+  const raidEvent = await fetchRaidEventState(jar);
 
   const current = {
     rubyFull: String(data.full_recovery_date || "").trim() === "",
     collectable: Number(data.gold_collect || 0) >= 1,
     activeBuildIds,
     constructionComplete: false,
-    raid: Number(data.raid_monster_flg || 0) === 1,
+    raidEventActive: raidEvent.active,
+    raidMonsterPresent: Number(data.raid_monster_flg || 0) === 1,
     checkedAt: new Date().toISOString()
   };
 
@@ -119,10 +120,44 @@ const activeBuildIds = getActiveBuildIds(data.build_data);
       }
     }
 
-    // レイド通知は後で有効化
-    // if (previous.raid === false && current.raid === true) {
-    //   notifications.push("⚔️ レイドモンスターが出現しました");
-    // }
+    if (
+      previous.raidEventActive === false &&
+      current.raidEventActive === true
+    ) {
+      notifications.push("🏴‍☠️ レイドイベントが開始しました");
+    }
+
+    if (
+      previous.raidMonsterPresent === false &&
+      current.raidMonsterPresent === true
+    ) {
+      notifications.push("⚔️ レイドモンスターが出現しました");
+    }
+  } else {
+    // 新フィールド導入直後にすでに開催・出現中なら、初回だけ通知する。
+    if (current.raidEventActive === true) {
+      notifications.push("🏴‍☠️ レイドイベントが開始しています");
+    }
+    if (current.raidMonsterPresent === true) {
+      notifications.push("⚔️ レイドモンスターが出現しています");
+    }
+  }
+
+  // 旧stateからの移行時も、現在開催中なら1回だけ通知する。
+  if (
+    previous &&
+    typeof previous.raidEventActive !== "boolean" &&
+    current.raidEventActive === true
+  ) {
+    notifications.push("🏴‍☠️ レイドイベントが開始しています");
+  }
+
+  if (
+    previous &&
+    typeof previous.raidMonsterPresent !== "boolean" &&
+    current.raidMonsterPresent === true
+  ) {
+    notifications.push("⚔️ レイドモンスターが出現しています");
   }
 
   await statePut(env, "state", current);
@@ -142,6 +177,7 @@ const activeBuildIds = getActiveBuildIds(data.build_data);
       full_recovery_date: data.full_recovery_date,
       gold_collect: data.gold_collect,
       next_collect_time: data.next_collect_time,
+      raid_event_start_flg: raidEvent.raw,
       raid_monster_flg: data.raid_monster_flg,
       build_count: Array.isArray(data.build_data) ? data.build_data.length : null,
       active_build_count: activeBuildIds.length,
@@ -157,6 +193,31 @@ function getActiveBuildIds(buildData) {
     .filter((b) => Number(b && b.last_time) > 0)
     .map((b) => String(b && b.id ? b.id : ""))
     .filter((id) => id !== "");
+}
+
+async function fetchRaidEventState(jar) {
+  const res = await requestWithJar(
+    GAME_MAIN + "&_=" + Date.now(),
+    { method: "GET" },
+    jar,
+    12
+  );
+  const html = await res.text();
+
+  const match = html.match(
+    /data-raid_event_start_flg=["']?([01])["']?/i
+  );
+
+  if (!match) {
+    throw new Error(
+      "メイン画面から data-raid_event_start_flg を取得できませんでした"
+    );
+  }
+
+  return {
+    active: match[1] === "1",
+    raw: match[1]
+  };
 }
 
 async function fetchAjax(jar) {

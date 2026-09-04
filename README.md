@@ -51,3 +51,14 @@ Message:
 `⚔️ レイドモンスターが出現しました`
 
 This prevents duplicate notifications on every Cron run.
+
+
+## Raid monitoring correction
+
+Two raid signals are monitored separately:
+
+- Raid event active: `data-raid_event_start_flg` from the authenticated main page
+- Raid monster present: `raid_monster_flg` from the Ajax response
+
+Notifications are transition-based. On migration from an older saved state,
+if the event or monster is already active, one initial notification is sent.

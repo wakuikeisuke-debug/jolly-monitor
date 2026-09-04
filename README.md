@@ -38,3 +38,16 @@ Production branch: `main`
 Cloudflare build/deploy command:
 
 `npx wrangler deploy`
+
+
+## Raid notifications
+
+Raid notification is enabled using `raid_monster_flg`.
+
+A notification is sent only when the state changes from `false` to `true`.
+
+Message:
+
+`⚔️ レイドモンスターが出現しました`
+
+This prevents duplicate notifications on every Cron run.
